@@ -2,6 +2,14 @@ import { Types } from 'mongoose';
 import { IBooking, Booking } from './Booking.model';
 import { Trip, ITrip } from '../trips/Trip.model';
 import { TripNotFoundError } from '../trips/trips.service';
+import { User } from '../auth/User.model';
+import { notificationsService } from '../notifications/notifications.service';
+import {
+  bookingRequestEmail,
+  bookingAcceptedEmail,
+  bookingRejectedEmail,
+  bookingCancelledByRiderEmail,
+} from '../../lib/email';
 
 export class BookingNotFoundError extends Error {
   constructor() {
@@ -41,6 +49,23 @@ export const bookingsService = {
     booking.status = 'confirmed';
     const saved = await booking.save();
     await Trip.findByIdAndUpdate(trip._id, { $inc: { seats_available: -1 } });
+
+    // Notify rider that booking was accepted
+    const acceptedTrip = booking.trip as unknown as { destination: string; departure_time: Date; driver: { name?: string; phone?: string } };
+    void notificationsService.notifyUser((booking.rider as { toString(): string }).toString(), {
+      title: 'Booking Accepted',
+      body: `Your trip to ${acceptedTrip.destination} is confirmed!`,
+      type: 'booking_accepted',
+      link: '/bookings',
+      emailSubject: 'Your Booking is Confirmed',
+      emailHtml: bookingAcceptedEmail(
+        acceptedTrip.destination,
+        new Date(acceptedTrip.departure_time).toLocaleDateString('en-PK', { dateStyle: 'medium' }),
+        (acceptedTrip.driver as { name?: string })?.name ?? 'Your driver',
+        (acceptedTrip.driver as { phone?: string })?.phone ?? ''
+      ),
+    }).catch(console.error);
+
     return saved;
   },
 
@@ -53,7 +78,20 @@ export const bookingsService = {
       throw new BookingStatusError('Booking is not pending', 'BOOKING_NOT_PENDING');
     }
     booking.status = 'rejected';
-    return booking.save();
+    const rejectedSaved = await booking.save();
+
+    // Notify rider that booking was rejected
+    const rejectedTrip = booking.trip as unknown as { destination: string };
+    void notificationsService.notifyUser((booking.rider as { toString(): string }).toString(), {
+      title: 'Booking Not Accepted',
+      body: `Your booking request for ${rejectedTrip.destination} was not accepted`,
+      type: 'booking_rejected',
+      link: '/bookings',
+      emailSubject: 'Booking Update',
+      emailHtml: bookingRejectedEmail(rejectedTrip.destination),
+    }).catch(console.error);
+
+    return rejectedSaved;
   },
 
   async createBooking(riderId: string, tripId: string, pickupPoint: string): Promise<IBooking> {
@@ -68,12 +106,30 @@ export const bookingsService = {
     if (trip.driver.toString() === riderId) {
       throw new BookingStatusError('You cannot book your own trip', 'SELF_BOOKING');
     }
-    return Booking.create({
+    const booking = await Booking.create({
       trip: new Types.ObjectId(tripId),
       rider: new Types.ObjectId(riderId),
       pickup_point: pickupPoint,
       status: 'pending',
     });
+
+    // Notify driver of new booking request
+    const rider = await User.findById(riderId).select('name').lean();
+    const riderName = (rider as { name?: string } | null)?.name ?? 'A rider';
+    void notificationsService.notifyUser((trip.driver as { toString(): string }).toString(), {
+      title: 'New Booking Request',
+      body: `${riderName} wants to join your trip to ${trip.destination}`,
+      type: 'booking_request',
+      link: `/trips/${tripId}`,
+      emailSubject: 'New Booking Request',
+      emailHtml: bookingRequestEmail(
+        riderName,
+        trip.destination,
+        new Date(trip.departure_time).toLocaleDateString('en-PK', { dateStyle: 'medium' })
+      ),
+    }).catch(console.error);
+
+    return booking;
   },
 
   async getMyBookings(riderId: string, tab: 'upcoming' | 'history' = 'upcoming'): Promise<IBooking[]> {
@@ -119,6 +175,22 @@ export const bookingsService = {
     if (wasConfirmed) {
       await Trip.findByIdAndUpdate(trip._id, { $inc: { seats_available: 1 } });
     }
+
+    // Notify driver that booking was cancelled by rider
+    const cancelledTrip = booking.trip as unknown as { destination: string; driver: { toString(): string } };
+    const cancellingRider = await User.findById(riderId).select('name').lean();
+    void notificationsService.notifyUser(cancelledTrip.driver.toString(), {
+      title: 'Booking Cancelled',
+      body: `${(cancellingRider as { name?: string } | null)?.name ?? 'A rider'} cancelled their booking for ${cancelledTrip.destination}`,
+      type: 'booking_cancelled',
+      link: `/trips/${(booking.trip as { toString(): string }).toString()}`,
+      emailSubject: 'Booking Cancellation',
+      emailHtml: bookingCancelledByRiderEmail(
+        (cancellingRider as { name?: string } | null)?.name ?? 'A rider',
+        cancelledTrip.destination
+      ),
+    }).catch(console.error);
+
     return saved;
   },
 };

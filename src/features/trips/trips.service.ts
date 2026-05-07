@@ -1,6 +1,8 @@
 import { Types } from 'mongoose';
 import { Trip, ITrip } from './Trip.model';
 import { Booking } from '../bookings/Booking.model';
+import { notificationsService } from '../notifications/notifications.service';
+import { tripCancelledEmail, reviewPromptEmail } from '../../lib/email';
 
 export class TripNotFoundError extends Error {
   constructor() {
@@ -157,6 +159,23 @@ export const tripsService = {
       { trip: trip._id, status: { $in: ['pending', 'confirmed'] } },
       { $set: { status: 'cancelled' } }
     );
+
+    // Notify all affected riders that the trip was cancelled
+    const affectedBookings = await Booking.find({
+      trip: trip._id,
+    }).select('rider').lean();
+    const tripDate = new Date(trip.departure_time).toLocaleDateString('en-PK', { dateStyle: 'medium' });
+    for (const b of affectedBookings) {
+      void notificationsService.notifyUser((b.rider as { toString(): string }).toString(), {
+        title: 'Trip Cancelled',
+        body: `Your trip to ${trip.destination} has been cancelled by the driver`,
+        type: 'trip_cancelled',
+        link: '/bookings',
+        emailSubject: 'Your Trip Has Been Cancelled',
+        emailHtml: tripCancelledEmail(trip.destination, tripDate),
+      }).catch(console.error);
+    }
+
     return trip.save();
   },
 
@@ -178,6 +197,30 @@ export const tripsService = {
     }
 
     trip.status = 'completed';
+
+    // Notify confirmed riders and the driver to leave a review
+    const completedBookings = await Booking.find({
+      trip: trip._id,
+      status: 'confirmed',
+    }).select('rider _id').lean();
+    for (const b of completedBookings) {
+      const reviewLink = `/trips/${trip._id}/review?bookingId=${b._id}`;
+      void notificationsService.notifyUser((b.rider as { toString(): string }).toString(), {
+        title: 'How was your trip?',
+        body: `Leave a review for your ${trip.destination} trip`,
+        type: 'review_prompt',
+        link: reviewLink,
+        emailSubject: 'Leave a Review',
+        emailHtml: reviewPromptEmail(trip.destination, reviewLink),
+      }).catch(console.error);
+      void notificationsService.notifyUser(driverId, {
+        title: 'How was your trip?',
+        body: `Leave a review for your ${trip.destination} trip`,
+        type: 'review_prompt',
+        link: reviewLink,
+      }).catch(console.error);
+    }
+
     return trip.save();
   },
 

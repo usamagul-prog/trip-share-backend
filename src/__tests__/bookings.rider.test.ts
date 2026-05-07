@@ -13,6 +13,18 @@ jest.mock('../features/trips/Trip.model', () => ({
   },
 }));
 
+jest.mock('../features/auth/User.model', () => ({
+  User: {
+    findById: jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue({ name: 'Test Rider' }) }),
+    }),
+  },
+}));
+
+jest.mock('../features/notifications/notifications.service', () => ({
+  notificationsService: { notifyUser: jest.fn().mockResolvedValue(undefined) },
+}));
+
 import { Types } from 'mongoose';
 import { Request, Response } from 'express';
 import { Booking } from '../features/bookings/Booking.model';

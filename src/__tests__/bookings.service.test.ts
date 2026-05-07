@@ -10,6 +10,10 @@ jest.mock('../features/trips/Trip.model', () => ({
   },
 }));
 
+jest.mock('../features/notifications/notifications.service', () => ({
+  notificationsService: { notifyUser: jest.fn().mockResolvedValue(undefined) },
+}));
+
 import { Types } from 'mongoose';
 import { Booking } from '../features/bookings/Booking.model';
 import { Trip } from '../features/trips/Trip.model';

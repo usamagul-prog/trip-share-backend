@@ -15,6 +15,10 @@ jest.mock('../features/bookings/Booking.model', () => ({
   },
 }));
 
+jest.mock('../features/notifications/notifications.service', () => ({
+  notificationsService: { notifyUser: jest.fn().mockResolvedValue(undefined) },
+}));
+
 import { Types } from 'mongoose';
 import { Trip } from '../features/trips/Trip.model';
 import { Booking } from '../features/bookings/Booking.model';
@@ -199,6 +203,9 @@ describe('tripsService.cancelTrip', () => {
     const trip = { ...mockTrip, driver: { toString: () => driverId }, save: saveMock };
     (Trip.findById as jest.Mock).mockResolvedValue(trip);
     (Booking.updateMany as jest.Mock).mockResolvedValue({});
+    (Booking.find as jest.Mock).mockReturnValue({
+      select: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+    });
     saveMock.mockResolvedValue({ ...trip, status: 'cancelled' });
 
     await tripsService.cancelTrip(tripId, driverId);
@@ -249,6 +256,9 @@ describe('tripsService.completeTrip', () => {
       save: saveMock,
     };
     (Trip.findById as jest.Mock).mockResolvedValue(trip);
+    (Booking.find as jest.Mock).mockReturnValue({
+      select: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+    });
     saveMock.mockResolvedValue({ ...trip, status: 'completed' });
 
     await tripsService.completeTrip(tripId, driverId);
