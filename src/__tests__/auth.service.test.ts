@@ -13,7 +13,7 @@ jest.mock('../features/auth/User.model', () => ({
 
 import { getAuth } from 'firebase-admin/auth';
 import { User } from '../features/auth/User.model';
-import { authService } from '../features/auth/auth.service';
+import { authService, AlreadyRegisteredError, FirebaseTokenError } from '../features/auth/auth.service';
 
 const mockUser = {
   _id: 'user123',
@@ -23,6 +23,8 @@ const mockUser = {
   is_verified: true,
   avatar_url: undefined,
 };
+
+beforeEach(() => jest.clearAllMocks());
 
 describe('authService.verifyFirebaseToken', () => {
   it('returns phone_number from verified token', async () => {
@@ -37,7 +39,7 @@ describe('authService.verifyFirebaseToken', () => {
     (getAuth as jest.Mock).mockReturnValue({
       verifyIdToken: jest.fn().mockResolvedValue({}),
     });
-    await expect(authService.verifyFirebaseToken('token-no-phone')).rejects.toThrow();
+    await expect(authService.verifyFirebaseToken('token-no-phone')).rejects.toThrow('phone_number');
   });
 });
 
@@ -59,7 +61,8 @@ describe('authService.findOrCreateUser', () => {
     const err = await authService
       .findOrCreateUser('+923001234567', 'Ali Khan', 'rider')
       .catch((e: unknown) => e);
-    expect((err as { code?: string }).code).toBe('ALREADY_REGISTERED');
+    expect(err).toBeInstanceOf(AlreadyRegisteredError);
+    expect((err as AlreadyRegisteredError).code).toBe('ALREADY_REGISTERED');
   });
 });
 
