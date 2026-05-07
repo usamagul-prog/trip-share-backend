@@ -10,7 +10,9 @@ const router = Router();
 const searchTripsSchema = z.object({
   from: z.string().min(2).max(60),
   to:   z.string().min(2).max(60),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+  date: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD')
+    .refine((d) => !isNaN(new Date(d).getTime()), 'Invalid date'),
 });
 
 const createTripSchema = z.object({

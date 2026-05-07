@@ -95,8 +95,12 @@ export const tripsController = {
   },
 
   async search(req: Request, res: Response): Promise<void> {
-    const { from, to, date } = req.query as { from: string; to: string; date: string };
-    const trips = await tripsService.searchTrips(from, to, date);
-    res.json({ trips });
+    try {
+      const { from, to, date } = req.query as { from: string; to: string; date: string };
+      const trips = await tripsService.searchTrips(from, to, date);
+      res.json({ trips });
+    } catch (err) {
+      throw err;
+    }
   },
 };
