@@ -40,8 +40,9 @@ export const bookingsService = {
     }
 
     booking.status = 'confirmed';
+    const saved = await booking.save();
     await Trip.findByIdAndUpdate(trip._id, { $inc: { seats_available: -1 } });
-    return booking.save();
+    return saved;
   },
 
   async rejectBooking(bookingId: string, driverId: string): Promise<IBooking> {
