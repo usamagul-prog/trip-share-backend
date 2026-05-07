@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import authRouter from './features/auth/auth.routes';
+import tripsRouter from './features/trips/trips.routes';
+import bookingsRouter from './features/bookings/bookings.routes';
 
 const app = express();
 
@@ -12,6 +14,8 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/trips', tripsRouter);
+app.use('/api/bookings', bookingsRouter);
 
 app.use((_req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Not found' });
