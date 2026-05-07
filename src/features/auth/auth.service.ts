@@ -20,7 +20,12 @@ export class FirebaseTokenError extends Error {
 
 export const authService = {
   async verifyFirebaseToken(idToken: string): Promise<string> {
-    const decoded = await getAuth().verifyIdToken(idToken);
+    let decoded;
+    try {
+      decoded = await getAuth().verifyIdToken(idToken);
+    } catch {
+      throw new FirebaseTokenError('INVALID_TOKEN', 'Firebase token verification failed');
+    }
     if (!decoded.phone_number)
       throw new FirebaseTokenError('MISSING_PHONE', 'Firebase token has no phone_number claim');
     return decoded.phone_number;

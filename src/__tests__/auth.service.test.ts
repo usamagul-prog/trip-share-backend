@@ -39,7 +39,19 @@ describe('authService.verifyFirebaseToken', () => {
     (getAuth as jest.Mock).mockReturnValue({
       verifyIdToken: jest.fn().mockResolvedValue({}),
     });
-    await expect(authService.verifyFirebaseToken('token-no-phone')).rejects.toThrow('phone_number');
+    const err = await authService.verifyFirebaseToken('token-no-phone').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(FirebaseTokenError);
+    expect((err as FirebaseTokenError).code).toBe('MISSING_PHONE');
+    expect((err as FirebaseTokenError).message).toMatch('phone_number');
+  });
+
+  it('throws INVALID_TOKEN when Firebase SDK rejects', async () => {
+    (getAuth as jest.Mock).mockReturnValue({
+      verifyIdToken: jest.fn().mockRejectedValue(new Error('Firebase: token expired')),
+    });
+    const err = await authService.verifyFirebaseToken('bad-token').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(FirebaseTokenError);
+    expect((err as FirebaseTokenError).code).toBe('INVALID_TOKEN');
   });
 });
 
