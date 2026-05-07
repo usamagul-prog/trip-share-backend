@@ -9,12 +9,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
   const token = header.slice(7);
   try {
-    const payload = verifyToken(token) as {
-      _id: string;
-      role: 'driver' | 'rider' | 'admin';
-      phone: string;
-    };
-    req.user = payload;
+    req.user = verifyToken(token);
     next();
   } catch {
     res.status(401).json({ error: 'unauthorized' });

@@ -1,4 +1,10 @@
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+
+export interface AuthPayload {
+  _id: string;
+  role: 'driver' | 'rider' | 'admin';
+  phone: string;
+}
 
 function getSecret(): string {
   const s = process.env.JWT_SECRET;
@@ -10,6 +16,12 @@ export function signToken(payload: object): string {
   return jwt.sign(payload, getSecret(), { expiresIn: '7d' });
 }
 
-export function verifyToken(token: string): object {
-  return jwt.verify(token, getSecret()) as object;
+export function verifyToken(token: string): AuthPayload {
+  const decoded = jwt.verify(token, getSecret());
+  if (typeof decoded === 'string') throw new Error('Invalid token payload');
+  const p = decoded as JwtPayload;
+  if (typeof p._id !== 'string' || typeof p.phone !== 'string' || !['driver', 'rider', 'admin'].includes(p.role as string)) {
+    throw new Error('Invalid token payload shape');
+  }
+  return { _id: p._id, role: p.role as AuthPayload['role'], phone: p.phone };
 }

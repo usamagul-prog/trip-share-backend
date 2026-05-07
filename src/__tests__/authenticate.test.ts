@@ -6,10 +6,12 @@ describe('authenticate middleware', () => {
   const next = jest.fn();
 
   function makeRes() {
-    return {
-      status: jest.fn().mockReturnThis(),
+    const res = {
+      status: jest.fn(),
       json: jest.fn(),
-    } as unknown as Response;
+    };
+    res.status.mockReturnValue(res);
+    return res as unknown as Response;
   }
 
   beforeEach(() => {
@@ -21,8 +23,11 @@ describe('authenticate middleware', () => {
 
   it('returns 401 with no Authorization header', () => {
     const req = { headers: {} } as Request;
-    authenticate(req, makeRes(), next);
+    const res = makeRes();
+    authenticate(req, res, next);
     expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ error: 'unauthorized' });
   });
 
   it('returns 401 with non-Bearer Authorization', () => {
@@ -35,10 +40,12 @@ describe('authenticate middleware', () => {
   it('attaches req.user and calls next() with valid JWT', () => {
     const token = signToken({ _id: 'user1', role: 'rider', phone: '+923001234567' });
     const req = { headers: { authorization: `Bearer ${token}` } } as unknown as Request;
-    authenticate(req, makeRes(), next);
+    const res = makeRes();
+    authenticate(req, res, next);
     expect(next).toHaveBeenCalled();
-    expect((req as any).user._id).toBe('user1');
-    expect((req as any).user.role).toBe('rider');
+    expect(res.status).not.toHaveBeenCalled();
+    expect(req.user!._id).toBe('user1');
+    expect(req.user!.role).toBe('rider');
   });
 
   it('returns 401 with expired/invalid token', () => {
