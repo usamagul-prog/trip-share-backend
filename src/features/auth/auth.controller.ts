@@ -86,4 +86,14 @@ export const authController = {
     }
     res.json({ user: toPublicUser(user) });
   },
+
+  async saveFcmToken(req: Request, res: Response): Promise<void> {
+    const { token } = req.body as { token: string };
+    if (!token) {
+      res.status(400).json({ error: 'token is required' });
+      return;
+    }
+    await User.findByIdAndUpdate(req.user!._id, { fcm_token: token });
+    res.status(204).end();
+  },
 };
