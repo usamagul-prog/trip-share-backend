@@ -14,6 +14,7 @@ jest.mock('../features/trips/Trip.model', () => ({
 }));
 
 import { Types } from 'mongoose';
+import { Request, Response } from 'express';
 import { Booking } from '../features/bookings/Booking.model';
 import { Trip } from '../features/trips/Trip.model';
 import {
@@ -22,6 +23,8 @@ import {
   BookingOwnershipError,
   BookingStatusError,
 } from '../features/bookings/bookings.service';
+import { TripNotFoundError } from '../features/trips/trips.service';
+import { bookingsController } from '../features/bookings/bookings.controller';
 
 const riderId = new Types.ObjectId().toString();
 const driverId = new Types.ObjectId().toString();
@@ -50,11 +53,10 @@ const mockBooking = {
 beforeEach(() => jest.clearAllMocks());
 
 describe('bookingsService.createBooking', () => {
-  it('throws BookingStatusError TRIP_NOT_FOUND when trip does not exist', async () => {
+  it('throws TripNotFoundError when trip does not exist', async () => {
     (Trip.findById as jest.Mock).mockResolvedValue(null);
     const err = await bookingsService.createBooking(riderId, tripId, 'F-10').catch((e) => e);
-    expect(err).toBeInstanceOf(BookingStatusError);
-    expect((err as BookingStatusError).code).toBe('TRIP_NOT_FOUND');
+    expect(err).toBeInstanceOf(TripNotFoundError);
   });
 
   it('throws BookingStatusError TRIP_NOT_SCHEDULED when trip is not scheduled', async () => {
@@ -87,6 +89,36 @@ describe('bookingsService.createBooking', () => {
     expect(Booking.create).toHaveBeenCalledWith(
       expect.objectContaining({ pickup_point: 'Sector F-10', status: 'pending' })
     );
+  });
+
+  it('propagates MongoDB duplicate-key error (code 11000) without catching it', async () => {
+    (Trip.findById as jest.Mock).mockResolvedValue(mockTrip);
+    const dupError = Object.assign(new Error('dup key'), { code: 11000 });
+    (Booking.create as jest.Mock).mockRejectedValue(dupError);
+    const err = await bookingsService.createBooking(riderId, tripId, 'Sector F-10').catch((e) => e);
+    expect(err).toBe(dupError);
+    expect((err as { code: number }).code).toBe(11000);
+  });
+});
+
+describe('bookingsController.create — 11000 duplicate-key mapping', () => {
+  it('returns 409 with duplicate message when Booking.create throws code 11000', async () => {
+    (Trip.findById as jest.Mock).mockResolvedValue(mockTrip);
+    const dupError = Object.assign(new Error('dup key'), { code: 11000 });
+    (Booking.create as jest.Mock).mockRejectedValue(dupError);
+
+    const json = jest.fn();
+    const status = jest.fn().mockReturnValue({ json });
+    const req = {
+      user: { _id: riderId },
+      body: { trip_id: tripId, pickup_point: 'Sector F-10' },
+    } as unknown as Request;
+    const res = { status, json } as unknown as Response;
+
+    await bookingsController.create(req, res);
+
+    expect(status).toHaveBeenCalledWith(409);
+    expect(json).toHaveBeenCalledWith({ error: 'You already have a booking for this trip' });
   });
 });
 

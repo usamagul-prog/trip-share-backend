@@ -73,18 +73,14 @@ export const bookingsController = {
   },
 
   async myBookings(req: Request, res: Response): Promise<void> {
-    try {
-      const raw = req.query.tab;
-      if (raw !== undefined && raw !== 'upcoming' && raw !== 'history') {
-        res.status(400).json({ error: 'tab must be "upcoming" or "history"' });
-        return;
-      }
-      const tab = (raw as 'upcoming' | 'history') ?? 'upcoming';
-      const bookings = await bookingsService.getMyBookings(req.user!._id, tab);
-      res.json({ bookings });
-    } catch (err) {
-      throw err;
+    const raw = req.query.tab;
+    if (raw !== undefined && raw !== 'upcoming' && raw !== 'history') {
+      res.status(400).json({ error: 'tab must be "upcoming" or "history"' });
+      return;
     }
+    const tab = (raw as 'upcoming' | 'history') ?? 'upcoming';
+    const bookings = await bookingsService.getMyBookings(req.user!._id, tab);
+    res.json({ bookings });
   },
 
   async cancel(req: Request, res: Response): Promise<void> {
