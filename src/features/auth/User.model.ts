@@ -8,6 +8,8 @@ export interface IUser extends Document {
   is_verified: boolean;
   fcm_token?: string;
   is_demo: boolean;
+  avg_rating: number;
+  review_count: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +23,8 @@ const UserSchema = new Schema<IUser>(
     is_verified: { type: Boolean, default: false },
     fcm_token: String,
     is_demo: { type: Boolean, default: false },
+    avg_rating: { type: Number, default: 0 },
+    review_count: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
