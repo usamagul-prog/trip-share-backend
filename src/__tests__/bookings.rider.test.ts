@@ -158,4 +158,20 @@ describe('bookingsService.getMyBookings', () => {
     expect(result[0]._id).toBe('b2');
     expect(result[1]._id).toBe('b1');
   });
+
+  it('queries completed+cancelled+rejected for history tab and sorts by updatedAt desc', async () => {
+    const older = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    const newer = new Date(Date.now() - 1 * 60 * 60 * 1000);
+    const bookings = [
+      { _id: 'b3', trip: { departure_time: older }, status: 'completed', updatedAt: older },
+      { _id: 'b4', trip: { departure_time: newer }, status: 'cancelled', updatedAt: newer },
+    ];
+    (Booking.find as jest.Mock).mockReturnValue({ populate: jest.fn().mockResolvedValue(bookings) });
+    const result = await bookingsService.getMyBookings(riderId, 'history');
+    expect(Booking.find).toHaveBeenCalledWith(
+      expect.objectContaining({ status: { $in: ['completed', 'cancelled', 'rejected'] } })
+    );
+    expect(result[0]._id).toBe('b4');
+    expect(result[1]._id).toBe('b3');
+  });
 });
