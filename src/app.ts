@@ -13,4 +13,13 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRouter);
 
+app.use((_req: express.Request, res: express.Response) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 export default app;

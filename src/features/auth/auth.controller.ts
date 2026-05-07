@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { authService, AlreadyRegisteredError, FirebaseTokenError } from './auth.service';
 import { signToken } from '../../utils/jwt';
 import { User, IUser } from './User.model';
+import { RegisterInput, LoginInput } from './auth.routes';
 
 type PublicUser = {
   _id: string;
@@ -23,11 +24,7 @@ function toPublicUser(user: IUser): PublicUser {
 
 export const authController = {
   async register(req: Request, res: Response): Promise<void> {
-    const { idToken, name, role } = req.body as {
-      idToken: string;
-      name: string;
-      role: 'driver' | 'rider';
-    };
+    const { idToken, name, role } = req.body as RegisterInput;
 
     let phone: string;
     try {
@@ -35,10 +32,9 @@ export const authController = {
     } catch (err) {
       if (err instanceof FirebaseTokenError) {
         res.status(401).json({ error: 'Firebase token verification failed' });
-      } else {
-        res.status(401).json({ error: 'Firebase token verification failed' });
+        return;
       }
-      return;
+      throw err; // unexpected errors go to global handler
     }
 
     try {
@@ -55,14 +51,17 @@ export const authController = {
   },
 
   async login(req: Request, res: Response): Promise<void> {
-    const { idToken } = req.body as { idToken: string };
+    const { idToken } = req.body as LoginInput;
 
     let phone: string;
     try {
       phone = await authService.verifyFirebaseToken(idToken);
-    } catch {
-      res.status(401).json({ error: 'Firebase token verification failed' });
-      return;
+    } catch (err) {
+      if (err instanceof FirebaseTokenError) {
+        res.status(401).json({ error: 'Firebase token verification failed' });
+        return;
+      }
+      throw err; // unexpected errors go to global handler
     }
 
     const user = await authService.findUserByPhone(phone);
@@ -76,7 +75,11 @@ export const authController = {
   },
 
   async me(req: Request, res: Response): Promise<void> {
-    const user = await User.findById(req.user!._id);
+    if (!req.user) {
+      res.status(401).json({ error: 'unauthorized' });
+      return;
+    }
+    const user = await User.findById(req.user._id);
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;

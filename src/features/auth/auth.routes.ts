@@ -14,6 +14,9 @@ const loginSchema = z.object({
   idToken: z.string().min(1),
 });
 
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+
 const router = Router();
 
 router.post('/register', validate(registerSchema), authController.register);

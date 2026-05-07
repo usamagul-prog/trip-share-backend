@@ -30,6 +30,7 @@ import app from '../app';
 import { authService } from '../features/auth/auth.service';
 import { User } from '../features/auth/User.model';
 import { signToken } from '../utils/jwt';
+import jwt from 'jsonwebtoken';
 
 const mockUser = {
   _id: 'user123',
@@ -75,6 +76,13 @@ describe('POST /api/auth/register', () => {
     expect(res.body).toHaveProperty('token');
     expect(res.body.user.phone).toBe('+923001234567');
     expect(res.body.user.role).toBe('rider');
+    expect(res.body.user.avatar_url).toBeNull();
+    expect(res.body.user).not.toHaveProperty('is_verified');
+    expect(res.body.user).not.toHaveProperty('is_demo');
+    const decoded = jwt.decode(res.body.token) as { _id: string; role: string; phone: string };
+    expect(decoded._id).toBe('user123');
+    expect(decoded.role).toBe('rider');
+    expect(decoded.phone).toBe('+923001234567');
   });
 
   it('returns 409 when phone already registered', async () => {
@@ -135,6 +143,11 @@ describe('POST /api/auth/login', () => {
     const res = await request(app).post('/api/auth/login').send({ idToken: 'valid' });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
+    expect(res.body.user.avatar_url).toBeNull();
+    const decoded = jwt.decode(res.body.token) as { _id: string; role: string; phone: string };
+    expect(decoded._id).toBe('user123');
+    expect(decoded.role).toBe('rider');
+    expect(decoded.phone).toBe('+923001234567');
   });
 });
 
