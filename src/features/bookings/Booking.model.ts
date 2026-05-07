@@ -5,7 +5,7 @@ export interface IBooking extends Document {
   rider: Types.ObjectId;
   pickup_point: string;
   seats: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'rejected' | 'cancelled' | 'completed';
   payment_method: 'cash';
   is_demo: boolean;
   createdAt: Date;
@@ -20,7 +20,7 @@ const BookingSchema = new Schema<IBooking>(
     seats: { type: Number, required: true, default: 1 },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+      enum: ['pending', 'confirmed', 'rejected', 'cancelled', 'completed'],
       default: 'pending',
     },
     payment_method: { type: String, enum: ['cash'], default: 'cash' },
@@ -28,5 +28,7 @@ const BookingSchema = new Schema<IBooking>(
   },
   { timestamps: true }
 );
+
+BookingSchema.index({ trip: 1, rider: 1 }, { unique: true });
 
 export const Booking = model<IBooking>('Booking', BookingSchema);

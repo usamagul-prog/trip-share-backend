@@ -9,6 +9,7 @@ export interface ITrip extends Document {
   seats_available: number;
   fare: number;
   status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+  vehicle_desc?: string;
   waypoints?: string[];
   is_demo: boolean;
   createdAt: Date;
@@ -29,6 +30,7 @@ const TripSchema = new Schema<ITrip>(
       enum: ['scheduled', 'active', 'completed', 'cancelled'],
       default: 'scheduled',
     },
+    vehicle_desc: { type: String, trim: true, maxlength: 100 },
     waypoints: [String],
     is_demo: { type: Boolean, default: false },
   },
