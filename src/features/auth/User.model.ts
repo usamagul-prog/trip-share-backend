@@ -7,6 +7,7 @@ export interface IUser extends Document {
   avatar_url?: string;
   is_verified: boolean;
   fcm_token?: string;
+  email?: string;
   is_demo: boolean;
   avg_rating: number;
   review_count: number;
@@ -22,6 +23,7 @@ const UserSchema = new Schema<IUser>(
     avatar_url: String,
     is_verified: { type: Boolean, default: false },
     fcm_token: String,
+    email: { type: String, sparse: true },
     is_demo: { type: Boolean, default: false },
     avg_rating: { type: Number, default: 0 },
     review_count: { type: Number, default: 0 },
