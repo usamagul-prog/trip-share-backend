@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { IBooking, Booking } from './Booking.model';
 import { Trip, ITrip } from '../trips/Trip.model';
+import { TripNotFoundError } from '../trips/trips.service';
 
 export class BookingNotFoundError extends Error {
   constructor() {
@@ -57,7 +58,7 @@ export const bookingsService = {
 
   async createBooking(riderId: string, tripId: string, pickupPoint: string): Promise<IBooking> {
     const trip = await Trip.findById(tripId);
-    if (!trip) throw new BookingStatusError('Trip not found', 'TRIP_NOT_FOUND');
+    if (!trip) throw new TripNotFoundError();
     if (trip.status !== 'scheduled') {
       throw new BookingStatusError('Trip is no longer available', 'TRIP_NOT_SCHEDULED');
     }

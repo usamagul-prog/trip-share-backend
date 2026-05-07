@@ -5,6 +5,7 @@ import {
   BookingOwnershipError,
   BookingStatusError,
 } from './bookings.service';
+import { TripNotFoundError } from '../trips/trips.service';
 
 export const bookingsController = {
   async accept(req: Request, res: Response): Promise<void> {
@@ -50,10 +51,10 @@ export const bookingsController = {
       );
       res.status(201).json({ booking });
     } catch (err) {
-      if (err instanceof BookingStatusError) {
-        if (err.code === 'TRIP_NOT_FOUND') {
-          res.status(404).json({ error: err.message });
-        } else if (err.code === 'SELF_BOOKING') {
+      if (err instanceof TripNotFoundError) {
+        res.status(404).json({ error: err.message });
+      } else if (err instanceof BookingStatusError) {
+        if (err.code === 'SELF_BOOKING') {
           res.status(403).json({ error: err.message });
         } else {
           res.status(409).json({ error: err.message });
@@ -72,9 +73,18 @@ export const bookingsController = {
   },
 
   async myBookings(req: Request, res: Response): Promise<void> {
-    const tab = (req.query.tab as 'upcoming' | 'history') || 'upcoming';
-    const bookings = await bookingsService.getMyBookings(req.user!._id, tab);
-    res.json({ bookings });
+    try {
+      const raw = req.query.tab;
+      if (raw !== undefined && raw !== 'upcoming' && raw !== 'history') {
+        res.status(400).json({ error: 'tab must be "upcoming" or "history"' });
+        return;
+      }
+      const tab = (raw as 'upcoming' | 'history') ?? 'upcoming';
+      const bookings = await bookingsService.getMyBookings(req.user!._id, tab);
+      res.json({ bookings });
+    } catch (err) {
+      throw err;
+    }
   },
 
   async cancel(req: Request, res: Response): Promise<void> {
