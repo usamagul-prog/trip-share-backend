@@ -7,10 +7,14 @@ import {
 
 export const notificationsController = {
   async list(req: Request, res: Response): Promise<void> {
-    const { notifications, unreadCount } = await notificationsService.getForUser(
-      req.user!._id.toString()
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const { notifications, unreadCount, total } = await notificationsService.getForUser(
+      req.user!._id.toString(),
+      page,
+      limit
     );
-    res.json({ notifications, unreadCount });
+    res.json({ notifications, unreadCount, total, page, limit });
   },
 
   async markRead(req: Request, res: Response): Promise<void> {

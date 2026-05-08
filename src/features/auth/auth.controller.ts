@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { authService, AlreadyRegisteredError, InvalidCredentialsError } from './auth.service';
 import { signToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt';
 import { User, IUser } from './User.model';
@@ -243,6 +244,23 @@ export const authController = {
     }
     await User.findByIdAndUpdate(userId, update);
     res.json({ url: result.secure_url });
+  },
+
+  async changePassword(req: Request, res: Response): Promise<void> {
+    const { current_password, new_password } = req.body as { current_password: string; new_password: string };
+    const user = await User.findById(req.user!._id).select('+password');
+    if (!user?.password) {
+      res.status(400).json({ error: 'Cannot change password for this account' });
+      return;
+    }
+    const ok = await bcrypt.compare(current_password, user.password);
+    if (!ok) {
+      res.status(401).json({ error: 'Current password is incorrect' });
+      return;
+    }
+    user.password = await bcrypt.hash(new_password, 12);
+    await user.save();
+    res.status(204).end();
   },
 
   async logout(req: Request, res: Response): Promise<void> {

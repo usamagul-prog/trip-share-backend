@@ -201,6 +201,25 @@ export const adminService = {
     return Report.findByIdAndUpdate(reportId, { status }, { new: true }).lean();
   },
 
+  async cancelTrip(tripId: string) {
+    const trip = await Trip.findById(tripId);
+    if (!trip) return null;
+    if (trip.status === 'cancelled') return trip;
+    trip.status = 'cancelled';
+    await Booking.updateMany(
+      { trip: trip._id, status: { $in: ['pending', 'confirmed'] } },
+      { $set: { status: 'cancelled' } }
+    );
+    return trip.save();
+  },
+
+  async updateBookingStatus(bookingId: string, status: 'confirmed' | 'cancelled' | 'completed') {
+    return Booking.findByIdAndUpdate(bookingId, { status }, { new: true })
+      .populate('rider', 'name phone')
+      .populate({ path: 'trip', select: 'origin destination departure_time fare driver', populate: { path: 'driver', select: 'name phone' } })
+      .lean();
+  },
+
   async verifyDriverDocs(userId: string) {
     return User.findByIdAndUpdate(
       userId,

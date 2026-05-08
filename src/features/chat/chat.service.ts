@@ -5,12 +5,23 @@ import { Trip } from '../trips/Trip.model';
 import { Report } from './Report.model';
 
 export const chatService = {
-  async getMessages(bookingId: string, limit = 50) {
-    return Message.find({ booking: bookingId })
-      .sort({ createdAt: 1 })
-      .limit(limit)
+  async getMessages(
+    bookingId: string,
+    before?: string,
+    limit = 50
+  ): Promise<{ messages: unknown[]; hasMore: boolean }> {
+    const filter: Record<string, unknown> = { booking: new Types.ObjectId(bookingId) };
+    if (before && Types.ObjectId.isValid(before)) {
+      filter._id = { $lt: new Types.ObjectId(before) };
+    }
+    const raw = await Message.find(filter)
+      .sort({ _id: -1 })
+      .limit(limit + 1)
       .populate('sender', 'name avatar_url')
       .lean();
+    const hasMore = raw.length > limit;
+    if (hasMore) raw.pop();
+    return { messages: raw.reverse(), hasMore };
   },
 
   async saveMessage(bookingId: string, senderId: string, text: string) {

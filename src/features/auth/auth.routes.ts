@@ -37,5 +37,9 @@ router.delete('/me', authenticate, authController.deleteAccount);
 router.post('/block/:userId', authenticate, authController.blockUser);
 router.delete('/block/:userId', authenticate, authController.unblockUser);
 router.post('/documents', authenticate, validateUpload, authController.uploadDocument);
+router.put('/password', authenticate, validate(z.object({
+  current_password: z.string().min(1, 'Current password is required'),
+  new_password: z.string().min(8, 'New password must be at least 8 characters'),
+})), authController.changePassword);
 
 export default router;

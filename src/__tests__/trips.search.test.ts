@@ -22,8 +22,8 @@ describe('tripsService.searchTrips', () => {
     (Trip.find as jest.Mock).mockReturnValue(chainMock());
     const result = await tripsService.searchTrips('Islamabad', 'Lahore', '2024-06-15');
     const call = (Trip.find as jest.Mock).mock.calls[0][0];
-    expect(call.origin).toBe('Islamabad');
-    expect(call.destination).toBe('Lahore');
+    expect(call.origin).toEqual({ $regex: '^Islamabad$', $options: 'i' });
+    expect(call.destination).toEqual({ $regex: '^Lahore$', $options: 'i' });
     expect(call.status).toBe('scheduled');
     expect(call.seats_available).toEqual({ $gt: 0 });
     expect(call.departure_time.$gte).toBeInstanceOf(Date);

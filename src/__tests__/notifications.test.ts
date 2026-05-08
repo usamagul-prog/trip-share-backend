@@ -4,6 +4,7 @@ jest.mock('../features/notifications/Notification.model', () => ({
     find: jest.fn(),
     findById: jest.fn(),
     updateMany: jest.fn(),
+    countDocuments: jest.fn(),
   },
 }));
 jest.mock('../features/auth/User.model', () => ({
@@ -39,7 +40,8 @@ const mockNotif = {
 
 function findChain(result: unknown[]) {
   const limit = jest.fn().mockResolvedValue(result);
-  const sort = jest.fn().mockReturnValue({ limit });
+  const skip = jest.fn().mockReturnValue({ limit });
+  const sort = jest.fn().mockReturnValue({ skip });
   return { sort };
 }
 
@@ -97,12 +99,16 @@ describe('notificationsService.notifyUser', () => {
 });
 
 describe('notificationsService.getForUser', () => {
-  it('returns notifications and unreadCount', async () => {
+  it('returns notifications, unreadCount, and total', async () => {
     const notifs = [{ ...mockNotif, is_read: false }, { ...mockNotif, is_read: true }];
     (Notification.find as jest.Mock).mockReturnValue(findChain(notifs));
+    (Notification.countDocuments as jest.Mock)
+      .mockResolvedValueOnce(10)  // total
+      .mockResolvedValueOnce(3);  // unreadCount
     const result = await notificationsService.getForUser(userId);
     expect(result.notifications).toHaveLength(2);
-    expect(result.unreadCount).toBe(1);
+    expect(result.total).toBe(10);
+    expect(result.unreadCount).toBe(3);
   });
 });
 

@@ -30,9 +30,11 @@ router.get('/metrics', requireAdmin, adminController.getMetrics);
 router.get('/trips/stats', requireAdmin, adminController.getTripStats);
 router.get('/trips', requireAdmin, adminController.listTrips);
 router.get('/trips/:id', requireAdmin, adminController.getTrip);
+router.put('/trips/:id/cancel', requireAdmin, adminController.cancelTrip);
 
 // Bookings
 router.get('/bookings', requireAdmin, adminController.listBookings);
+router.put('/bookings/:id/status', requireAdmin, adminController.updateBookingStatus);
 
 // Content moderation (reports)
 router.get('/moderation', requireAdmin, adminController.listReports);

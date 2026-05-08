@@ -44,12 +44,21 @@ export const notificationsService = {
     }
   },
 
-  async getForUser(userId: string): Promise<{ notifications: INotification[]; unreadCount: number }> {
-    const notifications = await Notification.find({ user: new Types.ObjectId(userId) })
-      .sort({ createdAt: -1 })
-      .limit(20);
-    const unreadCount = notifications.filter((n) => !n.is_read).length;
-    return { notifications, unreadCount };
+  async getForUser(
+    userId: string,
+    page = 1,
+    limit = 20
+  ): Promise<{ notifications: INotification[]; unreadCount: number; total: number }> {
+    const userOid = new Types.ObjectId(userId);
+    const [notifications, total, unreadCount] = await Promise.all([
+      Notification.find({ user: userOid })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Notification.countDocuments({ user: userOid }),
+      Notification.countDocuments({ user: userOid, is_read: false }),
+    ]);
+    return { notifications, unreadCount, total };
   },
 
   async markRead(notificationId: string, userId: string): Promise<INotification> {

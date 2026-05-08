@@ -242,11 +242,12 @@ export const tripsService = {
   },
 
   async searchTrips(from: string, to: string, date: string): Promise<ITrip[]> {
+    const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const dayStart = new Date(`${date}T00:00:00+05:00`);
     const dayEnd = new Date(`${date}T23:59:59+05:00`);
     return Trip.find({
-      origin: from,
-      destination: to,
+      origin: { $regex: `^${esc(from)}$`, $options: 'i' },
+      destination: { $regex: `^${esc(to)}$`, $options: 'i' },
       status: 'scheduled',
       seats_available: { $gt: 0 },
       departure_time: { $gte: dayStart, $lte: dayEnd },

@@ -129,6 +129,27 @@ export const adminController = {
     res.json({ report });
   },
 
+  async cancelTrip(req: Request, res: Response): Promise<void> {
+    const trip = await adminService.cancelTrip(req.params.id as string);
+    if (!trip) { res.status(404).json({ error: 'Trip not found' }); return; }
+    res.json({ trip });
+  },
+
+  async updateBookingStatus(req: Request, res: Response): Promise<void> {
+    const { status } = req.body as { status: string };
+    const allowed = ['confirmed', 'cancelled', 'completed'];
+    if (!allowed.includes(status)) {
+      res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
+      return;
+    }
+    const booking = await adminService.updateBookingStatus(
+      req.params.id as string,
+      status as 'confirmed' | 'cancelled' | 'completed'
+    );
+    if (!booking) { res.status(404).json({ error: 'Booking not found' }); return; }
+    res.json({ booking });
+  },
+
   async verifyDriverDocs(req: Request, res: Response): Promise<void> {
     const user = await adminService.verifyDriverDocs(req.params.id as string);
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }

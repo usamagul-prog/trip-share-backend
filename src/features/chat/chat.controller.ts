@@ -20,9 +20,10 @@ export const chatController = {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
+    const before = typeof req.query.before === 'string' ? req.query.before : undefined;
     await chatService.markRead(bookingId, userId);
-    const messages = await chatService.getMessages(bookingId);
-    res.json({ messages });
+    const { messages, hasMore } = await chatService.getMessages(bookingId, before);
+    res.json({ messages, hasMore });
   },
 
   async reportMessage(req: Request, res: Response): Promise<void> {
