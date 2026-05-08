@@ -1,6 +1,7 @@
 import { User } from '../auth/User.model';
 import { Trip } from '../trips/Trip.model';
 import { Booking } from '../bookings/Booking.model';
+import { Report } from '../chat/Report.model';
 import { signAdminToken } from '../../utils/jwt';
 
 export class AdminLoginError extends Error {
@@ -155,5 +156,104 @@ export const adminService = {
       .populate({ path: 'rider', select: 'name phone' })
       .lean();
     return { ...trip, bookings };
+  },
+
+  async listBookings(filters: { page: number; limit: number; status?: string; from?: string; to?: string }) {
+    const { page, limit, status, from, to } = filters;
+    const filter: Record<string, unknown> = {};
+    if (status) filter.status = status;
+    if (from || to) {
+      const dateFilter: Record<string, Date> = {};
+      if (from) dateFilter['$gte'] = new Date(from);
+      if (to) dateFilter['$lte'] = new Date(to);
+      filter.createdAt = dateFilter;
+    }
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter)
+        .populate('rider', 'name phone')
+        .populate({ path: 'trip', select: 'origin destination departure_time fare driver', populate: { path: 'driver', select: 'name phone' } })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Booking.countDocuments(filter),
+    ]);
+    return { bookings, total, page, pages: Math.ceil(total / limit) };
+  },
+
+  async listReports(page: number, limit: number, status?: string) {
+    const filter: Record<string, unknown> = {};
+    if (status) filter.status = status;
+    const [reports, total] = await Promise.all([
+      Report.find(filter)
+        .populate('reporter', 'name phone')
+        .populate({ path: 'message', select: 'text sender', populate: { path: 'sender', select: 'name' } })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Report.countDocuments(filter),
+    ]);
+    return { reports, total, page, pages: Math.ceil(total / limit) };
+  },
+
+  async updateReportStatus(reportId: string, status: 'reviewed' | 'dismissed') {
+    return Report.findByIdAndUpdate(reportId, { status }, { new: true }).lean();
+  },
+
+  async verifyDriverDocs(userId: string) {
+    return User.findByIdAndUpdate(
+      userId,
+      { doc_status: 'approved', $unset: { doc_rejection_reason: '' } },
+      { new: true },
+    ).lean();
+  },
+
+  async rejectDriverDocs(userId: string, reason: string) {
+    return User.findByIdAndUpdate(
+      userId,
+      { doc_status: 'rejected', doc_rejection_reason: reason },
+      { new: true },
+    ).lean();
+  },
+
+  async getMetrics() {
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const weekStart = new Date(todayStart);
+    weekStart.setUTCDate(todayStart.getUTCDate() - ((todayStart.getUTCDay() + 6) % 7));
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+    const [
+      totalUsers,
+      totalDrivers,
+      totalRiders,
+      activeTrips,
+      tripsToday,
+      tripsThisWeek,
+      tripsThisMonth,
+      bookingsToday,
+      bookingsThisWeek,
+      bookingsThisMonth,
+      pendingBookings,
+    ] = await Promise.all([
+      User.countDocuments({}),
+      User.countDocuments({ role: 'driver' }),
+      User.countDocuments({ role: 'rider' }),
+      Trip.countDocuments({ status: 'active' }),
+      Trip.countDocuments({ createdAt: { $gte: todayStart } }),
+      Trip.countDocuments({ createdAt: { $gte: weekStart } }),
+      Trip.countDocuments({ createdAt: { $gte: monthStart } }),
+      Booking.countDocuments({ createdAt: { $gte: todayStart } }),
+      Booking.countDocuments({ createdAt: { $gte: weekStart } }),
+      Booking.countDocuments({ createdAt: { $gte: monthStart } }),
+      Booking.countDocuments({ status: 'pending' }),
+    ]);
+
+    return {
+      users: { total: totalUsers, drivers: totalDrivers, riders: totalRiders },
+      trips: { active: activeTrips, today: tripsToday, thisWeek: tripsThisWeek, thisMonth: tripsThisMonth },
+      bookings: { today: bookingsToday, thisWeek: bookingsThisWeek, thisMonth: bookingsThisMonth, pending: pendingBookings },
+    };
   },
 };

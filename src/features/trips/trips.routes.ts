@@ -22,6 +22,7 @@ const createTripSchema = z.object({
   seats_total:    z.number().int().min(1).max(4),
   fare:           z.number().int().min(1).max(50000),
   vehicle_desc:   z.string().max(100).optional(),
+  vehicle_plate:  z.string().regex(/^[A-Z]{2,4}-\d{3,4}$/i, 'Enter a valid Pakistani license plate (e.g. ABC-1234)').optional(),
   waypoints:      z.array(z.string().min(2).max(60)).max(5).optional(),
 });
 
@@ -31,6 +32,7 @@ const updateTripSchema = z
     departure_time: z.string().datetime().optional(),
     seats_total:    z.number().int().min(1).max(4).optional(),
     vehicle_desc:   z.string().max(100).optional(),
+    vehicle_plate:  z.string().regex(/^[A-Z]{2,4}-\d{3,4}$/i, 'Enter a valid Pakistani license plate (e.g. ABC-1234)').optional(),
   })
   .refine((obj) => Object.keys(obj).length > 0, { message: 'At least one field required' });
 

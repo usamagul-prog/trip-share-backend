@@ -23,5 +23,6 @@ const ReviewSchema = new Schema<IReview>(
 );
 
 ReviewSchema.index({ booking: 1, reviewer: 1 }, { unique: true });
+ReviewSchema.index({ reviewee: 1, createdAt: -1 });
 
 export const Review = model<IReview>('Review', ReviewSchema);

@@ -87,6 +87,11 @@ export const adminController = {
     res.json(stats);
   },
 
+  async getMetrics(_req: Request, res: Response): Promise<void> {
+    const metrics = await adminService.getMetrics();
+    res.json(metrics);
+  },
+
   async getTrip(req: Request, res: Response): Promise<void> {
     const trip = await adminService.getTrip(req.params.id as string);
     if (!trip) {
@@ -94,5 +99,47 @@ export const adminController = {
       return;
     }
     res.json({ trip });
+  },
+
+  async listBookings(req: Request, res: Response): Promise<void> {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(Number(req.query.limit) || 20, 100);
+    const { status, from, to } = req.query as Record<string, string>;
+    const result = await adminService.listBookings({ page, limit, status, from, to });
+    res.json(result);
+  },
+
+  async listReports(req: Request, res: Response): Promise<void> {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(Number(req.query.limit) || 20, 100);
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const result = await adminService.listReports(page, limit, status);
+    res.json(result);
+  },
+
+  async updateReportStatus(req: Request, res: Response): Promise<void> {
+    const id = req.params.id as string;
+    const { status } = req.body as { status: 'reviewed' | 'dismissed' };
+    if (!['reviewed', 'dismissed'].includes(status)) {
+      res.status(400).json({ error: 'status must be reviewed or dismissed' });
+      return;
+    }
+    const report = await adminService.updateReportStatus(id, status);
+    if (!report) { res.status(404).json({ error: 'Report not found' }); return; }
+    res.json({ report });
+  },
+
+  async verifyDriverDocs(req: Request, res: Response): Promise<void> {
+    const user = await adminService.verifyDriverDocs(req.params.id as string);
+    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    res.json({ user });
+  },
+
+  async rejectDriverDocs(req: Request, res: Response): Promise<void> {
+    const { reason } = req.body as { reason: string };
+    if (!reason?.trim()) { res.status(400).json({ error: 'reason is required' }); return; }
+    const user = await adminService.rejectDriverDocs(req.params.id as string, reason.trim());
+    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    res.json({ user });
   },
 };

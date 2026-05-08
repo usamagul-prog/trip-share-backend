@@ -10,6 +10,7 @@ export interface ITrip extends Document {
   fare: number;
   status: 'scheduled' | 'active' | 'completed' | 'cancelled';
   vehicle_desc?: string;
+  vehicle_plate?: string;
   waypoints?: string[];
   is_demo: boolean;
   createdAt: Date;
@@ -31,10 +32,15 @@ const TripSchema = new Schema<ITrip>(
       default: 'scheduled',
     },
     vehicle_desc: { type: String, trim: true, maxlength: 100 },
+    vehicle_plate: { type: String, trim: true, uppercase: true, maxlength: 12 },
     waypoints: [String],
     is_demo: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+TripSchema.index({ origin: 1, destination: 1, departure_time: 1, status: 1 });
+TripSchema.index({ driver: 1, status: 1 });
+TripSchema.index({ departure_time: 1 });
 
 export const Trip = model<ITrip>('Trip', TripSchema);

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import * as Sentry from '@sentry/node';
 import { verifyToken } from '../utils/jwt';
 import { User } from '../features/auth/User.model';
 
@@ -41,5 +42,6 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     status: user.status,
     fcm_token: user.fcm_token,
   };
+  Sentry.setUser({ id: String(user._id), username: user.name });
   next();
 }

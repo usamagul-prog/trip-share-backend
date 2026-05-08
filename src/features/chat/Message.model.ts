@@ -20,4 +20,7 @@ const MessageSchema = new Schema<IMessage>(
   { timestamps: true }
 );
 
+MessageSchema.index({ booking: 1 });
+MessageSchema.index({ booking: 1, createdAt: 1 });
+
 export const Message = model<IMessage>('Message', MessageSchema);
