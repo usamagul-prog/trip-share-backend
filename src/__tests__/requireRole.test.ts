@@ -13,7 +13,7 @@ function makeRes(): { status: jest.Mock; json: jest.Mock } {
 
 describe('requireRole', () => {
   it('calls next() when user has an allowed role', () => {
-    const req = makeReq({ _id: 'u1', role: 'driver', phone: '+921' });
+    const req = makeReq({ _id: 'u1', role: 'driver', email: 'test@demo.com' });
     const res = makeRes();
     const next = jest.fn() as NextFunction;
     requireRole('driver')(req as Request, res as unknown as Response, next);
@@ -22,7 +22,7 @@ describe('requireRole', () => {
   });
 
   it('returns 403 when user role is not in allowed list', () => {
-    const req = makeReq({ _id: 'u1', role: 'rider', phone: '+921' });
+    const req = makeReq({ _id: 'u1', role: 'rider', email: 'test@demo.com' });
     const res = makeRes();
     const next = jest.fn() as NextFunction;
     requireRole('driver')(req as Request, res as unknown as Response, next);
@@ -41,7 +41,7 @@ describe('requireRole', () => {
   });
 
   it('allows admin when admin is in the allowed list', () => {
-    const req = makeReq({ _id: 'u1', role: 'admin', phone: '+921' });
+    const req = makeReq({ _id: 'u1', role: 'admin', email: 'test@demo.com' });
     const res = makeRes();
     const next = jest.fn() as NextFunction;
     requireRole('driver', 'admin')(req as Request, res as unknown as Response, next);

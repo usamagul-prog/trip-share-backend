@@ -1,23 +1,16 @@
 jest.mock('../features/auth/auth.service', () => ({
   authService: {
-    verifyFirebaseToken: jest.fn(),
-    findOrCreateUser: jest.fn(),
-    findUserByPhone: jest.fn(),
+    register: jest.fn(),
+    login: jest.fn(),
+    findUserById: jest.fn(),
   },
   AlreadyRegisteredError: class AlreadyRegisteredError extends Error {
     code = 'ALREADY_REGISTERED' as const;
-    constructor() {
-      super('Phone already registered');
-      this.name = 'AlreadyRegisteredError';
-    }
+    constructor() { super('Email already registered'); this.name = 'AlreadyRegisteredError'; }
   },
-  FirebaseTokenError: class FirebaseTokenError extends Error {
-    code: string;
-    constructor(code: string, message: string) {
-      super(message);
-      this.name = 'FirebaseTokenError';
-      this.code = code;
-    }
+  InvalidCredentialsError: class InvalidCredentialsError extends Error {
+    code = 'INVALID_CREDENTIALS' as const;
+    constructor() { super('Invalid email or password'); this.name = 'InvalidCredentialsError'; }
   },
 }));
 
@@ -36,12 +29,11 @@ import app from '../app';
 import { authService } from '../features/auth/auth.service';
 import { User } from '../features/auth/User.model';
 import { signToken } from '../utils/jwt';
-import jwt from 'jsonwebtoken';
 
 const mockUser = {
   _id: 'user123',
   name: 'Ali Khan',
-  phone: '+923001234567',
+  email: 'ali@example.com',
   role: 'rider' as const,
   avatar_url: undefined,
 };
@@ -52,108 +44,81 @@ beforeEach(() => {
 });
 
 describe('POST /api/auth/register', () => {
-  it('returns 400 when idToken is missing', async () => {
-    const res = await request(app).post('/api/auth/register').send({ name: 'Ali', role: 'rider' });
+  it('returns 400 when email is missing', async () => {
+    const res = await request(app).post('/api/auth/register').send({ name: 'Ali', role: 'rider', password: 'pass1234', terms_accepted: true });
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 when name is too short', async () => {
-    const res = await request(app).post('/api/auth/register').send({ idToken: 'tok', name: 'A', role: 'rider' });
+  it('returns 400 when password is too short', async () => {
+    const res = await request(app).post('/api/auth/register').send({ email: 'a@b.com', name: 'Ali Khan', role: 'rider', password: 'short', terms_accepted: true });
     expect(res.status).toBe(400);
   });
 
   it('returns 400 when role is invalid', async () => {
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ idToken: 'tok', name: 'Ali Khan', role: 'admin' });
+    const res = await request(app).post('/api/auth/register').send({ email: 'a@b.com', name: 'Ali Khan', role: 'admin', password: 'password123', terms_accepted: true });
     expect(res.status).toBe(400);
   });
 
   it('returns 201 with token + user on success', async () => {
-    (authService.verifyFirebaseToken as jest.Mock).mockResolvedValue('+923001234567');
-    (authService.findOrCreateUser as jest.Mock).mockResolvedValue(mockUser);
+    (authService.register as jest.Mock).mockResolvedValue(mockUser);
 
     const res = await request(app).post('/api/auth/register').send({
-      idToken: 'valid-firebase-token',
+      email: 'ali@example.com',
       name: 'Ali Khan',
       role: 'rider',
+      password: 'password123',
+      terms_accepted: true,
     });
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('token');
-    expect(res.body.user.phone).toBe('+923001234567');
+    expect(res.body.user.email).toBe('ali@example.com');
     expect(res.body.user.role).toBe('rider');
-    expect(res.body.user.avatar_url).toBeNull();
-    expect(res.body.user).not.toHaveProperty('is_verified');
-    expect(res.body.user).not.toHaveProperty('is_demo');
-    const decoded = jwt.decode(res.body.token) as { _id: string; role: string; phone: string };
-    expect(decoded._id).toBe('user123');
-    expect(decoded.role).toBe('rider');
-    expect(decoded.phone).toBe('+923001234567');
   });
 
-  it('returns 409 when phone already registered', async () => {
-    (authService.verifyFirebaseToken as jest.Mock).mockResolvedValue('+923001234567');
+  it('returns 409 when email already registered', async () => {
     const MockAlreadyRegisteredError = (
       jest.requireMock('../features/auth/auth.service') as {
         AlreadyRegisteredError: new () => Error & { code: string };
       }
     ).AlreadyRegisteredError;
-    (authService.findOrCreateUser as jest.Mock).mockRejectedValue(new MockAlreadyRegisteredError());
+    (authService.register as jest.Mock).mockRejectedValue(new MockAlreadyRegisteredError());
 
     const res = await request(app).post('/api/auth/register').send({
-      idToken: 'valid-firebase-token',
+      email: 'ali@example.com',
       name: 'Ali Khan',
       role: 'rider',
+      password: 'password123',
+      terms_accepted: true,
     });
     expect(res.status).toBe(409);
-  });
-
-  it('returns 401 when Firebase token is invalid', async () => {
-    const MockFirebaseTokenError = (
-      jest.requireMock('../features/auth/auth.service') as {
-        FirebaseTokenError: new (code: string, msg: string) => Error;
-      }
-    ).FirebaseTokenError;
-    (authService.verifyFirebaseToken as jest.Mock).mockRejectedValue(
-      new MockFirebaseTokenError('INVALID_TOKEN', 'bad')
-    );
-
-    const res = await request(app).post('/api/auth/register').send({
-      idToken: 'bad-token',
-      name: 'Ali Khan',
-      role: 'rider',
-    });
-    expect(res.status).toBe(401);
   });
 });
 
 describe('POST /api/auth/login', () => {
-  it('returns 400 when idToken is missing', async () => {
-    const res = await request(app).post('/api/auth/login').send({});
+  it('returns 400 when email is missing', async () => {
+    const res = await request(app).post('/api/auth/login').send({ password: 'pass' });
     expect(res.status).toBe(400);
   });
 
-  it('returns 404 with not_registered when user does not exist', async () => {
-    (authService.verifyFirebaseToken as jest.Mock).mockResolvedValue('+923001234567');
-    (authService.findUserByPhone as jest.Mock).mockResolvedValue(null);
+  it('returns 401 on invalid credentials', async () => {
+    const MockInvalidCredentialsError = (
+      jest.requireMock('../features/auth/auth.service') as {
+        InvalidCredentialsError: new () => Error;
+      }
+    ).InvalidCredentialsError;
+    (authService.login as jest.Mock).mockRejectedValue(new MockInvalidCredentialsError());
 
-    const res = await request(app).post('/api/auth/login').send({ idToken: 'valid' });
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBe('not_registered');
+    const res = await request(app).post('/api/auth/login').send({ email: 'ali@example.com', password: 'wrong' });
+    expect(res.status).toBe(401);
   });
 
   it('returns 200 with token + user on success', async () => {
-    (authService.verifyFirebaseToken as jest.Mock).mockResolvedValue('+923001234567');
-    (authService.findUserByPhone as jest.Mock).mockResolvedValue(mockUser);
+    (authService.login as jest.Mock).mockResolvedValue(mockUser);
 
-    const res = await request(app).post('/api/auth/login').send({ idToken: 'valid' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'ali@example.com', password: 'password123' });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
-    expect(res.body.user.avatar_url).toBeNull();
-    const decoded = jwt.decode(res.body.token) as { _id: string; role: string; phone: string };
-    expect(decoded._id).toBe('user123');
-    expect(decoded.role).toBe('rider');
-    expect(decoded.phone).toBe('+923001234567');
+    expect(res.body.user.email).toBe('ali@example.com');
   });
 });
 
@@ -164,19 +129,15 @@ describe('GET /api/auth/me', () => {
   });
 
   it('returns 200 with user when authenticated', async () => {
-    const token = signToken({ _id: 'user123', role: 'rider', phone: '+923001234567' });
-    // First call: authenticate middleware uses .select().lean() chain
+    const token = signToken({ _id: 'user123', role: 'rider', email: 'ali@example.com' });
     (User.findById as jest.Mock).mockReturnValueOnce({
       select: jest.fn().mockReturnValue({
         lean: jest.fn().mockResolvedValue({ _id: 'user123', name: 'Ali Khan', role: 'rider', status: 'active' }),
       }),
     });
-    // Second call: authController.me uses findById directly
     (User.findById as jest.Mock).mockResolvedValueOnce(mockUser);
 
-    const res = await request(app)
-      .get('/api/auth/me')
-      .set('Authorization', `Bearer ${token}`);
+    const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.user.name).toBe('Ali Khan');
   });
