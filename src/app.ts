@@ -5,6 +5,7 @@ import tripsRouter from './features/trips/trips.routes';
 import bookingsRouter from './features/bookings/bookings.routes';
 import reviewsRouter from './features/reviews/reviews.routes';
 import notificationsRouter from './features/notifications/notifications.routes';
+import adminRouter from './features/admin/admin.routes';
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use('/api/trips', tripsRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/admin', adminRouter);
 
 app.use((_req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Not found' });
