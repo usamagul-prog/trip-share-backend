@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -42,7 +42,13 @@ app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', cred
 app.use(cookieParser());
 app.use(requestLogger);
 app.use(express.json({ limit: '1mb' }));
-app.use(mongoSanitize());
+// express-mongo-sanitize is incompatible with Express 5 (req.query is read-only)
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (req.body && typeof req.body === 'object') {
+    req.body = mongoSanitize.sanitize(req.body, { replaceWith: '_' });
+  }
+  next();
+});
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
