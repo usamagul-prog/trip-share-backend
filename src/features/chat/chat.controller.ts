@@ -3,6 +3,11 @@ import mongoose from 'mongoose';
 import { chatService } from './chat.service';
 
 export const chatController = {
+  async getConversations(req: Request, res: Response): Promise<void> {
+    const bookings = await chatService.getConversations(req.user!._id);
+    res.json({ bookings });
+  },
+
   async getMessages(req: Request, res: Response): Promise<void> {
     const bookingId = req.params.bookingId as string;
     if (!mongoose.isValidObjectId(bookingId)) {

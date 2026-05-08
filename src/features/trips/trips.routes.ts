@@ -36,9 +36,10 @@ const updateTripSchema = z
   })
   .refine((obj) => Object.keys(obj).length > 0, { message: 'At least one field required' });
 
-// /search and /my-trips MUST be before /:id — Express matches in declaration order
+// named routes MUST be before /:id — Express matches in declaration order
 router.get('/search', authenticate, validate(searchTripsSchema, 'query'), tripsController.search);
 router.get('/my-trips', authenticate, requireRole('driver'), tripsController.getMyTrips);
+router.get('/', authenticate, tripsController.list);
 
 router.post('/', authenticate, requireRole('driver'), validate(createTripSchema), tripsController.create);
 router.get('/:id', authenticate, tripsController.getOne);

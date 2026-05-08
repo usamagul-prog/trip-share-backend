@@ -4,6 +4,7 @@ import { authenticate } from '../../middleware/auth';
 
 const router = Router();
 
+router.get('/conversations', authenticate, chatController.getConversations);
 router.get('/:bookingId/messages', authenticate, chatController.getMessages);
 router.post('/messages/:messageId/report', authenticate, chatController.reportMessage);
 

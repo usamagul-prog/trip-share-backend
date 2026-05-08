@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { Message } from './Message.model';
 import { Booking } from '../bookings/Booking.model';
+import { Trip } from '../trips/Trip.model';
 import { Report } from './Report.model';
 
 export const chatService = {
@@ -36,6 +37,26 @@ export const chatService = {
     const riderId = String(booking.rider);
     const driverId = String(booking.trip.driver);
     return riderId === userId || driverId === userId;
+  },
+
+  async getConversations(userId: string) {
+    const myTrips = await Trip.find({ driver: new Types.ObjectId(userId) }).select('_id').lean();
+    const myTripIds = myTrips.map((t) => t._id);
+    return Booking.find({
+      status: { $in: ['confirmed', 'completed'] },
+      $or: [
+        { rider: new Types.ObjectId(userId) },
+        { trip: { $in: myTripIds } },
+      ],
+    })
+      .populate({
+        path: 'trip',
+        select: 'origin destination departure_time driver',
+        populate: { path: 'driver', select: 'name' },
+      })
+      .populate('rider', 'name avatar_url')
+      .sort({ updatedAt: -1 })
+      .lean();
   },
 
   async reportMessage(messageId: string, reporterId: string, reason: string) {

@@ -94,6 +94,13 @@ export const tripsController = {
     }
   },
 
+  async list(req: Request, res: Response): Promise<void> {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const result = await tripsService.listUpcomingTrips(page, limit);
+    res.json(result);
+  },
+
   async search(req: Request, res: Response): Promise<void> {
     try {
       const { from, to, date } = req.query as { from: string; to: string; date: string };

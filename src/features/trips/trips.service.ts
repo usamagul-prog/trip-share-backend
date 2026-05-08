@@ -224,6 +224,23 @@ export const tripsService = {
     return trip.save();
   },
 
+  async listUpcomingTrips(page = 1, limit = 20): Promise<{ trips: ITrip[]; total: number }> {
+    const filter = {
+      status: 'scheduled' as ITrip['status'],
+      seats_available: { $gt: 0 },
+      departure_time: { $gte: new Date() },
+    };
+    const [trips, total] = await Promise.all([
+      Trip.find(filter)
+        .populate('driver', 'name avatar_url avg_rating review_count')
+        .sort({ departure_time: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Trip.countDocuments(filter),
+    ]);
+    return { trips, total };
+  },
+
   async searchTrips(from: string, to: string, date: string): Promise<ITrip[]> {
     const dayStart = new Date(`${date}T00:00:00+05:00`);
     const dayEnd = new Date(`${date}T23:59:59+05:00`);

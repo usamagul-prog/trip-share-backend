@@ -9,7 +9,8 @@
     "build": "tsc",
     "seed:routes": "ts-node scripts/seed-routes.ts",
     "seed": "ts-node scripts/seed/index.ts",
-    "seed:reset": "ts-node scripts/seed/reset-runner.ts"
+    "seed:reset": "ts-node scripts/seed/reset-runner.ts",
+    "seed:demo": "ts-node --transpile-only scripts/seed-demo.ts"
   },
   "dependencies": {
     "@sentry/node": "^10.52.0",
