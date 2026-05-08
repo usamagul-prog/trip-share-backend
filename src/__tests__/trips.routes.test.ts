@@ -1,3 +1,13 @@
+jest.mock('../features/auth/User.model', () => ({
+  User: {
+    findById: jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ _id: 'driver1', name: 'Ali', role: 'driver', status: 'active' }),
+      }),
+    }),
+  },
+}));
+
 jest.mock('../features/trips/trips.service', () => ({
   tripsService: {
     createTrip: jest.fn(),

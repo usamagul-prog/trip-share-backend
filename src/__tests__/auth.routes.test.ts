@@ -22,7 +22,13 @@ jest.mock('../features/auth/auth.service', () => ({
 }));
 
 jest.mock('../features/auth/User.model', () => ({
-  User: { findById: jest.fn() },
+  User: {
+    findById: jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ _id: 'user123', name: 'Ali Khan', role: 'rider', status: 'active' }),
+      }),
+    }),
+  },
 }));
 
 import request from 'supertest';
@@ -159,7 +165,14 @@ describe('GET /api/auth/me', () => {
 
   it('returns 200 with user when authenticated', async () => {
     const token = signToken({ _id: 'user123', role: 'rider', phone: '+923001234567' });
-    (User.findById as jest.Mock).mockResolvedValue(mockUser);
+    // First call: authenticate middleware uses .select().lean() chain
+    (User.findById as jest.Mock).mockReturnValueOnce({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ _id: 'user123', name: 'Ali Khan', role: 'rider', status: 'active' }),
+      }),
+    });
+    // Second call: authController.me uses findById directly
+    (User.findById as jest.Mock).mockResolvedValueOnce(mockUser);
 
     const res = await request(app)
       .get('/api/auth/me')

@@ -11,6 +11,9 @@ export interface IUser extends Document {
   is_demo: boolean;
   avg_rating: number;
   review_count: number;
+  status: 'active' | 'suspended';
+  suspension_reason?: string;
+  suspended_at?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +30,9 @@ const UserSchema = new Schema<IUser>(
     is_demo: { type: Boolean, default: false },
     avg_rating: { type: Number, default: 0 },
     review_count: { type: Number, default: 0 },
+    status: { type: String, enum: ['active', 'suspended'], default: 'active' },
+    suspension_reason: String,
+    suspended_at: Date,
   },
   { timestamps: true }
 );

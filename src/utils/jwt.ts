@@ -6,6 +6,10 @@ export interface AuthPayload {
   phone: string;
 }
 
+export interface AdminPayload {
+  role: 'admin';
+}
+
 function getSecret(): string {
   const s = process.env.JWT_SECRET;
   if (!s) throw new Error('JWT_SECRET environment variable is not set');
@@ -24,4 +28,16 @@ export function verifyToken(token: string): AuthPayload {
     throw new Error('Invalid token payload shape');
   }
   return { _id: p._id, role: p.role as AuthPayload['role'], phone: p.phone };
+}
+
+export function signAdminToken(): string {
+  return jwt.sign({ role: 'admin' }, getSecret(), { expiresIn: '2h' });
+}
+
+export function verifyAdminToken(token: string): AdminPayload {
+  const decoded = jwt.verify(token, getSecret());
+  if (typeof decoded === 'string') throw new Error('Invalid token payload');
+  const p = decoded as JwtPayload;
+  if (p.role !== 'admin') throw new Error('Not an admin token');
+  return { role: 'admin' };
 }

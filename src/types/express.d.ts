@@ -3,9 +3,13 @@ declare global {
     interface Request {
       user?: {
         _id: string;
+        name?: string;
         role: 'driver' | 'rider' | 'admin';
-        phone: string;
+        phone?: string;
+        status?: 'active' | 'suspended';
+        fcm_token?: string;
       };
+      adminRole?: 'admin';
     }
   }
 }
