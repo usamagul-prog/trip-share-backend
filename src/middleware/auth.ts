@@ -10,18 +10,22 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   }
   const token = header.slice(7);
   let userId: string;
-  let role: 'driver' | 'rider' | 'admin';
   try {
     const payload = verifyToken(token);
     userId = payload._id;
-    role = payload.role;
   } catch {
     res.status(401).json({ error: 'unauthorized' });
     return;
   }
-  const user = await User.findById(userId)
-    .select('_id name role status fcm_token')
-    .lean<{ _id: unknown; name: string; role: 'driver' | 'rider' | 'admin'; status: 'active' | 'suspended'; fcm_token?: string }>();
+  let user: { _id: unknown; name: string; role: 'driver' | 'rider' | 'admin'; status: 'active' | 'suspended'; fcm_token?: string } | null;
+  try {
+    user = await User.findById(userId)
+      .select('_id name role status fcm_token')
+      .lean<{ _id: unknown; name: string; role: 'driver' | 'rider' | 'admin'; status: 'active' | 'suspended'; fcm_token?: string }>();
+  } catch {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
   if (!user) {
     res.status(401).json({ error: 'unauthorized' });
     return;
@@ -33,7 +37,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   req.user = {
     _id: String(user._id),
     name: user.name,
-    role: role,
+    role: user.role,
     status: user.status,
     fcm_token: user.fcm_token,
   };

@@ -38,6 +38,6 @@ export function verifyAdminToken(token: string): AdminPayload {
   const decoded = jwt.verify(token, getSecret());
   if (typeof decoded === 'string') throw new Error('Invalid token payload');
   const p = decoded as JwtPayload;
-  if (p.role !== 'admin') throw new Error('Not an admin token');
+  if (p.role !== 'admin' || p._id !== undefined) throw new Error('Not an admin token');
   return { role: 'admin' };
 }

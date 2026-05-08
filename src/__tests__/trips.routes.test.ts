@@ -1,10 +1,14 @@
 jest.mock('../features/auth/User.model', () => ({
   User: {
-    findById: jest.fn().mockReturnValue({
+    findById: jest.fn().mockImplementation((id: string) => ({
       select: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ _id: 'driver1', name: 'Ali', role: 'driver', status: 'active' }),
+        lean: jest.fn().mockResolvedValue(
+          String(id) === 'rider1'
+            ? { _id: 'rider1', name: 'Rider', role: 'rider', status: 'active' }
+            : { _id: 'driver1', name: 'Ali', role: 'driver', status: 'active' }
+        ),
       }),
-    }),
+    })),
   },
 }));
 
