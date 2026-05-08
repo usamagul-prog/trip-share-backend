@@ -17,7 +17,7 @@ import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
 
-const skip = () => process.env.NODE_ENV === 'test';
+const skip = () => process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
