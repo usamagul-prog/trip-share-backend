@@ -3,7 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 export interface AuthPayload {
   _id: string;
   role: 'driver' | 'rider' | 'admin';
-  phone: string;
+  email: string;
 }
 
 export interface AdminPayload {
@@ -30,13 +30,13 @@ export function verifyToken(token: string): AuthPayload {
   const decoded = jwt.verify(token, getSecret());
   if (typeof decoded === 'string') throw new Error('Invalid token payload');
   const p = decoded as JwtPayload;
-  if (typeof p._id !== 'string' || typeof p.phone !== 'string' || !['driver', 'rider', 'admin'].includes(p.role as string)) {
+  if (typeof p._id !== 'string' || typeof p.email !== 'string' || !['driver', 'rider', 'admin'].includes(p.role as string)) {
     throw new Error('Invalid token payload shape');
   }
-  return { _id: p._id, role: p.role as AuthPayload['role'], phone: p.phone };
+  return { _id: p._id, role: p.role as AuthPayload['role'], email: p.email };
 }
 
-export function signRefreshToken(payload: { _id: string; phone: string; role: AuthPayload['role'] }): string {
+export function signRefreshToken(payload: { _id: string; email: string; role: AuthPayload['role'] }): string {
   return jwt.sign({ ...payload, type: 'refresh' }, getRefreshSecret(), { expiresIn: '30d' });
 }
 
@@ -44,10 +44,10 @@ export function verifyRefreshToken(token: string): AuthPayload {
   const decoded = jwt.verify(token, getRefreshSecret());
   if (typeof decoded === 'string') throw new Error('Invalid token payload');
   const p = decoded as JwtPayload;
-  if (p.type !== 'refresh' || typeof p._id !== 'string' || typeof p.phone !== 'string' || !['driver', 'rider', 'admin'].includes(p.role as string)) {
+  if (p.type !== 'refresh' || typeof p._id !== 'string' || typeof p.email !== 'string' || !['driver', 'rider', 'admin'].includes(p.role as string)) {
     throw new Error('Invalid refresh token payload');
   }
-  return { _id: p._id, role: p.role as AuthPayload['role'], phone: p.phone };
+  return { _id: p._id, role: p.role as AuthPayload['role'], email: p.email };
 }
 
 export function signAdminToken(): string {

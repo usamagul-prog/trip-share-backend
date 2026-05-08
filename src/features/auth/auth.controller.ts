@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { authService, AlreadyRegisteredError, FirebaseTokenError } from './auth.service';
+import { authService, AlreadyRegisteredError, InvalidCredentialsError } from './auth.service';
 import { signToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt';
 import { User, IUser } from './User.model';
 import { Trip } from '../trips/Trip.model';
@@ -12,7 +12,8 @@ import cloudinary from '../../config/cloudinary';
 type PublicUser = {
   _id: string;
   name: string;
-  phone: string;
+  email: string;
+  phone?: string;
   role: string;
   avatar_url: string | null;
 };
@@ -21,6 +22,7 @@ function toPublicUser(user: IUser): PublicUser {
   return {
     _id: String(user._id),
     name: user.name,
+    email: user.email,
     phone: user.phone,
     role: user.role,
     avatar_url: user.avatar_url ?? null,
@@ -36,7 +38,7 @@ const COOKIE_OPTIONS = {
 };
 
 async function issueTokens(res: Response, user: IUser): Promise<string> {
-  const payload = { _id: String(user._id), role: user.role, phone: user.phone };
+  const payload = { _id: String(user._id), role: user.role, email: user.email };
   const accessToken = signToken(payload);
   const refreshToken = signRefreshToken(payload);
   await User.findByIdAndUpdate(user._id, { refresh_token: refreshToken });
@@ -46,15 +48,13 @@ async function issueTokens(res: Response, user: IUser): Promise<string> {
 
 export const authController = {
   async register(req: Request, res: Response): Promise<void> {
-    const { idToken, name, role, dob, terms_accepted } = req.body as RegisterInput;
+    const { email, password, name, role, dob, terms_accepted } = req.body as RegisterInput;
 
-    // Terms must be accepted by everyone
     if (!terms_accepted) {
       res.status(400).json({ error: 'You must accept the Terms of Service to register.' });
       return;
     }
 
-    // Age verification: drivers must be 18+
     if (role === 'driver') {
       if (!dob) {
         res.status(400).json({ error: 'Date of birth is required for driver registration.' });
@@ -70,30 +70,17 @@ export const authController = {
       }
     }
 
-    let phone: string;
     try {
-      phone = await authService.verifyFirebaseToken(idToken);
-    } catch (err) {
-      if (err instanceof FirebaseTokenError) {
-        const msg = err.code === 'INVALID_PHONE' ? err.message : 'Firebase token verification failed';
-        res.status(401).json({ error: msg });
-        return;
-      }
-      throw err; // unexpected errors go to global handler
-    }
-
-    const extras = {
-      terms_accepted_at: new Date(),
-      ...(dob ? { dob: new Date(dob) } : {}),
-    };
-
-    try {
-      const user = await authService.findOrCreateUser(phone, name, role, extras);
+      const extras = {
+        terms_accepted_at: new Date(),
+        ...(dob ? { dob: new Date(dob) } : {}),
+      };
+      const user = await authService.register(email, password, name, role, extras);
       const token = await issueTokens(res, user);
       res.status(201).json({ token, user: toPublicUser(user) });
     } catch (err) {
       if (err instanceof AlreadyRegisteredError) {
-        res.status(409).json({ error: 'Phone already registered. Please login instead.' });
+        res.status(409).json({ error: 'Email already registered. Please login instead.' });
         return;
       }
       throw err;
@@ -101,28 +88,19 @@ export const authController = {
   },
 
   async login(req: Request, res: Response): Promise<void> {
-    const { idToken } = req.body as LoginInput;
+    const { email, password } = req.body as LoginInput;
 
-    let phone: string;
     try {
-      phone = await authService.verifyFirebaseToken(idToken);
+      const user = await authService.login(email, password);
+      const token = await issueTokens(res, user);
+      res.json({ token, user: toPublicUser(user) });
     } catch (err) {
-      if (err instanceof FirebaseTokenError) {
-        const msg = err.code === 'INVALID_PHONE' ? err.message : 'Firebase token verification failed';
-        res.status(401).json({ error: msg });
+      if (err instanceof InvalidCredentialsError) {
+        res.status(401).json({ error: 'Invalid email or password.' });
         return;
       }
-      throw err; // unexpected errors go to global handler
+      throw err;
     }
-
-    const user = await authService.findUserByPhone(phone);
-    if (!user) {
-      res.status(404).json({ error: 'not_registered' });
-      return;
-    }
-
-    const token = await issueTokens(res, user);
-    res.json({ token, user: toPublicUser(user) });
   },
 
   async me(req: Request, res: Response): Promise<void> {

@@ -1,13 +1,14 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 export interface IUser extends Document {
-  phone: string;
+  phone?: string;
   name: string;
   role: 'driver' | 'rider' | 'admin';
   avatar_url?: string;
   is_verified: boolean;
   fcm_token?: string;
-  email?: string;
+  email: string;
+  password?: string;
   is_demo: boolean;
   avg_rating: number;
   review_count: number;
@@ -28,13 +29,14 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    phone: { type: String, required: true, unique: true },
+    phone: { type: String, sparse: true },
     name: { type: String, required: true },
     role: { type: String, enum: ['driver', 'rider', 'admin'], required: true },
     avatar_url: String,
     is_verified: { type: Boolean, default: false },
     fcm_token: String,
-    email: { type: String, sparse: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, select: false },
     is_demo: { type: Boolean, default: false },
     avg_rating: { type: Number, default: 0 },
     review_count: { type: Number, default: 0 },

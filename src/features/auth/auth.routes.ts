@@ -6,18 +6,20 @@ import { validateUpload } from '../../middleware/upload';
 import { authController } from './auth.controller';
 
 const registerSchema = z.object({
-  idToken: z.string().min(1),
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(2).max(60),
   role: z.enum(['driver', 'rider']),
-  dob: z.string().optional(), // ISO date string, required for drivers
+  dob: z.string().optional(),
   terms_accepted: z.boolean().optional(),
 });
 
 const loginSchema = z.object({
-  idToken: z.string().min(1),
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(1),
 });
 
-export type RegisterInput = z.infer<typeof registerSchema> & { dob?: string; terms_accepted?: boolean };
+export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
 const router = Router();
