@@ -160,3 +160,45 @@ describe('adminService.getTrip', () => {
     expect(result).toBeNull();
   });
 });
+
+// ---- exportUsers ----
+describe('adminService.exportUsers', () => {
+  it('returns CSV string with header and one data row', async () => {
+    const createdAt = new Date('2025-01-01T00:00:00.000Z');
+    (User.find as jest.Mock).mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue([
+          { name: 'Alice', phone: '+921', email: 'a@test.com', role: 'rider', status: 'active', avg_rating: 4.5, review_count: 2, createdAt },
+        ]),
+      }),
+    });
+    const csv = await adminService.exportUsers();
+    expect(csv).toContain('name,phone,email,role,status,avg_rating,review_count,createdAt');
+    expect(csv).toContain('Alice,+921,a@test.com,rider,active,4.5,2,');
+  });
+});
+
+// ---- getUser ----
+describe('adminService.getUser', () => {
+  it('returns user with trips and bookings', async () => {
+    const userId = new Types.ObjectId().toString();
+    (User.findById as jest.Mock).mockReturnValue({ lean: jest.fn().mockResolvedValue({ _id: userId, name: 'Bob', role: 'driver' }) });
+    const tripsLean = jest.fn().mockResolvedValue([{ _id: new Types.ObjectId(), origin: 'LHR' }]);
+    const tripsLimit = jest.fn().mockReturnValue({ lean: tripsLean });
+    const tripsSort = jest.fn().mockReturnValue({ limit: tripsLimit });
+    (Trip.find as jest.Mock).mockReturnValue({ sort: tripsSort });
+    const bookingsLean = jest.fn().mockResolvedValue([]);
+    const bookingsPopulate = jest.fn().mockReturnValue({ lean: bookingsLean });
+    const bookingsLimit = jest.fn().mockReturnValue({ populate: bookingsPopulate });
+    const bookingsSort = jest.fn().mockReturnValue({ limit: bookingsLimit });
+    (Booking.find as jest.Mock).mockReturnValue({ sort: bookingsSort });
+    const result = await adminService.getUser(userId);
+    expect(result).toMatchObject({ name: 'Bob', trips: expect.any(Array), bookings: expect.any(Array) });
+  });
+
+  it('returns null when user not found', async () => {
+    (User.findById as jest.Mock).mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
+    const result = await adminService.getUser(new Types.ObjectId().toString());
+    expect(result).toBeNull();
+  });
+});
