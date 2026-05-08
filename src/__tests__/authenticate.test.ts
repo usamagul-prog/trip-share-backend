@@ -53,7 +53,7 @@ describe('authenticate middleware', () => {
   });
 
   it('attaches req.user and calls next() with valid JWT', async () => {
-    const token = signToken({ _id: 'user1', role: 'rider', phone: '+923001234567' });
+    const token = signToken({ _id: 'user1', role: 'rider', email: 'test@demo.com' });
     const req = { headers: { authorization: `Bearer ${token}` } } as unknown as Request;
     const res = makeRes();
     makeActiveUserMock();

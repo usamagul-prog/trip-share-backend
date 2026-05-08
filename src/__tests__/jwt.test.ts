@@ -5,7 +5,7 @@ describe('JWT utils', () => {
   afterAll(() => { delete process.env.JWT_SECRET; });
 
   it('signs a token and verifies it', () => {
-    const token = signToken({ _id: 'abc', role: 'rider', phone: '+923001234567' });
+    const token = signToken({ _id: 'abc', role: 'rider', email: 'test@demo.com' });
     const decoded = verifyToken(token) as { _id: string; role: string };
     expect(decoded._id).toBe('abc');
     expect(decoded.role).toBe('rider');

@@ -51,8 +51,8 @@ import { signToken } from '../utils/jwt';
 // Must be set before signToken is called at module level
 process.env.JWT_SECRET = 'testsecret-32-chars-minimum-len';
 
-const driverToken = signToken({ _id: 'driver1', role: 'driver', phone: '+921' });
-const riderToken = signToken({ _id: 'rider1', role: 'rider', phone: '+922' });
+const driverToken = signToken({ _id: 'driver1', role: 'driver', email: 'driver@demo.com' });
+const riderToken = signToken({ _id: 'rider1', role: 'rider', email: 'rider@demo.com' });
 
 const mockTrip = {
   _id: 'trip1',
@@ -63,7 +63,7 @@ const mockTrip = {
   seats_available: 3,
   fare: 1500,
   status: 'scheduled',
-  driver: { _id: 'driver1', name: 'Ali', phone: '+921' },
+  driver: { _id: 'driver1', name: 'Ali', email: 'driver@demo.com' },
 };
 
 beforeEach(() => {

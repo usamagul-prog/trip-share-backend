@@ -21,6 +21,7 @@ jest.mock('../features/auth/User.model', () => ({
         lean: jest.fn().mockResolvedValue({ _id: 'user123', name: 'Ali Khan', role: 'rider', status: 'active' }),
       }),
     }),
+    findByIdAndUpdate: jest.fn().mockResolvedValue(null),
   },
 }));
 
